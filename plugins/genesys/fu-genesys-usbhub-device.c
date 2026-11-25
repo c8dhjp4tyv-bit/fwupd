@@ -2215,6 +2215,47 @@ fu_genesys_usbhub_device_check_firmware(FuDevice *device,
 {
 	FuGenesysUsbhubDevice *self = FU_GENESYS_USBHUB_DEVICE(device);
 
+	if (fu_device_has_private_flag(device, FU_GENESYS_USBHUB_FLAG_VERIFY_PROJECT)) {
+		g_autofree gchar *dev_project = NULL;
+		g_autofree gchar *dev_ic = NULL;
+		const gchar *fw_project = NULL;
+		const gchar *fw_ic = NULL;
+
+		/* check project */
+		if (self->st_project_ts != NULL) {
+			dev_project =
+			    fu_struct_genesys_ts_brand_project_get_project(self->st_project_ts);
+		}
+		fw_project = fu_genesys_usbhub_firmware_get_brand_project(
+		    FU_GENESYS_USBHUB_FIRMWARE(firmware));
+		if (g_strcmp0(dev_project, fw_project) != 0) {
+			g_set_error(error,
+				    FWUPD_ERROR,
+				    FWUPD_ERROR_INVALID_FILE,
+				    "firmware PROJECT %s does not match device %s",
+				    fw_project,
+				    dev_project);
+			return FALSE;
+		}
+
+		/* check IC */
+		if (self->st_static_ts != NULL) {
+			dev_ic = fu_struct_genesys_ts_static_get_mask_project_ic_type(
+			    self->st_static_ts);
+		}
+		fw_ic = fu_genesys_usbhub_firmware_get_mask_project_ic_type(
+		    FU_GENESYS_USBHUB_FIRMWARE(firmware));
+		if (g_strcmp0(dev_ic, fw_ic) != 0) {
+			g_set_error(error,
+				    FWUPD_ERROR,
+				    FWUPD_ERROR_INVALID_FILE,
+				    "firmware mask IC type %s does not match device %s",
+				    fw_ic,
+				    dev_ic);
+			return FALSE;
+		}
+	}
+
 	/* has codesign */
 	if (fu_device_has_private_flag(FU_DEVICE(self), FU_GENESYS_USBHUB_FLAG_HAS_CODESIGN)) {
 		g_autoptr(FuFirmware) img = NULL;
@@ -3324,4 +3365,5 @@ fu_genesys_usbhub_device_class_init(FuGenesysUsbhubDeviceClass *klass)
 	fu_device_register_private_flag(device_class, FU_GENESYS_USBHUB_FLAG_HAS_CODESIGN);
 	fu_device_register_private_flag(device_class, FU_GENESYS_USBHUB_FLAG_HAS_HW_CODESIGN);
 	fu_device_register_private_flag(device_class, FU_GENESYS_USBHUB_FLAG_PROXY_REQUIRED);
+	fu_device_register_private_flag(device_class, FU_GENESYS_USBHUB_FLAG_VERIFY_PROJECT);
 }
